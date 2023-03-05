@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Distance\Distance;
 use App\Distance\DistanceServiceInterface;
 use App\Distance\Unit;
+use App\Redis\RedisClientInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,8 +16,10 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class DistanceController extends AbstractController
 {
-    public function __construct(private readonly DistanceServiceInterface $distanceService)
-    {}
+    public function __construct(
+        private readonly DistanceServiceInterface $distanceService,
+        private readonly RedisClientInterface $redisClient
+    ) {}
     #[Route('/distance', methods: ['GET'])]
     public function get(Request $request): JsonResponse
     {
@@ -30,10 +33,16 @@ class DistanceController extends AbstractController
                 (float) $request->get('second_distance_value'),
                 Unit::from($request->get('second_distance_unit'))
             );
-
             $responseUnit = Unit::from($request->get('response_unit'));
 
+            $redisKey = $this->generateRedisKey($firstDistance, $secondDistance, $responseUnit);
+            if ($cachedRecord = $this->redisClient->read($redisKey)) {
+                return new JsonResponse($cachedRecord, Response::HTTP_OK, [], true);
+            }
+
             $totalDistance = $this->distanceService->calculate($firstDistance, $secondDistance, $responseUnit);
+
+            $this->redisClient->write($redisKey, json_encode($totalDistance, JSON_THROW_ON_ERROR));
 
             return new JsonResponse([
                 'distance' => $totalDistance->getValue(),
@@ -45,5 +54,17 @@ class DistanceController extends AbstractController
                 Response::HTTP_BAD_REQUEST
             );
         }
+    }
+
+    private function generateRedisKey(Distance $firstDistance, Distance $secondDistance, Unit $unit): string
+    {
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            $firstDistance->getValue(),
+            $firstDistance->getUnit()->value,
+            $secondDistance->getValue(),
+            $secondDistance->getUnit()->value,
+            $unit->value
+        );
     }
 }

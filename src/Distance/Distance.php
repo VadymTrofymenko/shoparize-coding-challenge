@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Distance;
 
-final readonly class Distance
+final readonly class Distance implements \JsonSerializable
 {
     public function __construct(
         private float $value,
@@ -18,5 +18,13 @@ final readonly class Distance
     public function getUnit(): Unit
     {
         return $this->unit;
+    }
+
+    public function jsonSerialize(): mixed
+    {
+       return [
+           'distance' => $this->value,
+           'unit' => $this->unit->value
+       ];
     }
 }
