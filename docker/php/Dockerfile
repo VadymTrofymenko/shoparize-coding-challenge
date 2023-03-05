@@ -12,6 +12,8 @@ COPY ../.. .
 # Set working directory
 WORKDIR /var/www/html
 
+RUN usermod -u 1000 www-data;
+
 # Expose ports
 EXPOSE 80
 
