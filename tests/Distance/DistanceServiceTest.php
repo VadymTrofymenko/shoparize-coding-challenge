@@ -24,11 +24,11 @@ class DistanceServiceTest extends TestCase
         $returnUnit = Unit::METER;
 
         $distanceService = new DistanceService();
-        $distanceInMeters = ($firstDistanceValue + ($secondDistanceValue * DistanceService::FACTORS[Unit::YARDS->value]));
+        $distanceInMeters = ($firstDistanceValue + ($secondDistanceValue * DistanceService::TO_METER_FACTORS[Unit::YARDS->value]));
 
         self::assertSame(
-            $distanceInMeters,
-            $distanceService->calculate($firstDistance, $secondDistance, $returnUnit)->getValue()
+            $this->toDecimal($distanceInMeters),
+            $this->toDecimal($distanceService->calculate($firstDistance, $secondDistance, $returnUnit)->getValue())
         );
     }
 
@@ -39,17 +39,20 @@ class DistanceServiceTest extends TestCase
     {
         $firstDistanceValue = random_int(0, 10) / 10;
         $secondDistanceValue = random_int(0, 10) / 10;
-
         $firstDistance = new Distance($firstDistanceValue, Unit::METER);
         $secondDistance = new Distance($secondDistanceValue, Unit::YARDS);
         $returnUnit = Unit::YARDS;
-
         $distanceService = new DistanceService();
-        $distanceInMeters = ($secondDistanceValue + ($firstDistanceValue * DistanceService::FACTORS[Unit::YARDS->value]));
+        $distanceInYards = ($secondDistanceValue + $firstDistanceValue * DistanceService::TO_YARD_FACTORS['METER']);
 
         self::assertSame(
-            $distanceInMeters,
-            $distanceService->calculate($firstDistance, $secondDistance, $returnUnit)->getValue()
+            $this->toDecimal($distanceInYards),
+            $this->toDecimal($distanceService->calculate($firstDistance, $secondDistance, $returnUnit)->getValue())
         );
+    }
+
+    private function toDecimal(float $value, int $decimal = 2): string
+    {
+        return number_format($value, $decimal);
     }
 }
